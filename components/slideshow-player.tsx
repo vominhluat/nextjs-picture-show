@@ -4,6 +4,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useSlideshow } from "@/hooks/use-slideshow";
 import type { SlideshowImage, SlideshowSettings, TransitionType } from "@/lib/slideshow/types";
 import { Icon } from "./icons";
+import { SlideshowClock } from "./slideshow-clock";
 
 interface Props { images: SlideshowImage[]; settings: SlideshowSettings; open: boolean; onClose: () => void; onImageError: (id: string) => void }
 const randomTransitions: TransitionType[] = ["fade", "slide-left", "slide-right", "zoom"];
@@ -28,7 +29,7 @@ export function SlideshowPlayer({ images, settings, open, onClose, onImageError 
   }, [onClose, open, player, showControls]);
   useEffect(() => {
     if (!open || !player.playable.length) return;
-    const preload = [1, 2].map((offset) => player.playable[(player.index + offset) % player.playable.length]).filter(Boolean).map((item) => { const image = new Image(); image.src = item.url; return image; });
+    const preload = [1, 2].map((offset) => player.playable[(player.index + offset) % player.playable.length]).filter(Boolean).map((item) => { const image = new Image(); image.referrerPolicy = "no-referrer"; image.src = item.url; return image; });
     return () => preload.forEach((image) => { image.src = ""; });
   }, [open, player.index, player.playable]);
   if (!open) return null;
@@ -36,10 +37,10 @@ export function SlideshowPlayer({ images, settings, open, onClose, onImageError 
 
   return <div ref={rootRef} className={`player ${controlsVisible ? "controls-visible" : ""}`} onPointerMove={showControls} onPointerDown={showControls}>
     {/* Local blob URLs need native img elements and must not pass through an image optimizer. */}
-    {player.current ? <img key={player.current.id} src={player.current.url} alt={player.current.name} className={`player-image transition-${transition} fit-${settings.fitMode}`} style={{ animationDuration: `${settings.transitionMs}ms` }} onError={() => onImageError(player.current!.id)} /> : <div className="player-empty"><Icon name="image"/><h2>Không còn ảnh có thể phát</h2><p>Hãy kiểm tra lại thư viện ảnh.</p></div>}
+    {player.current ? <div className="player-media"><img key={player.current.id} src={player.current.url} alt={player.current.name} referrerPolicy="no-referrer" className={`player-image transition-${transition} fit-${settings.fitMode}`} style={{ animationDuration: `${settings.transitionMs}ms` }} onError={() => onImageError(player.current!.id)} /></div> : <div className="player-empty"><Icon name="image"/><h2>Không còn ảnh có thể phát</h2><p>Hãy kiểm tra lại thư viện ảnh.</p></div>}
+    <SlideshowClock settings={settings}/>
     <div className="player-top player-chrome"><span className="brand-mark"><Icon name="logo"/> Lumina</span><button className="icon-button" onClick={onClose} aria-label="Đóng trình chiếu"><Icon name="close"/></button></div>
     <div className="player-bottom player-chrome">
-      <div className="player-meta"><div><strong>{settings.showName ? player.current?.name : "Đang trình chiếu"}</strong><span>{player.index + 1} / {player.playable.length} · {Math.ceil(player.remainingMs / 1000)} giây</span></div></div>
       <div className="progress-track"><span style={{ width: `${progress}%` }}/></div>
       <div className="player-actions">
         <button onClick={player.restart} aria-label="Phát lại"><Icon name="restart"/></button><button onClick={player.previous} aria-label="Ảnh trước"><Icon name="previous"/></button>
